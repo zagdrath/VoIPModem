@@ -523,8 +523,9 @@ verified, and the Linux test results.
   physical modem; lines are limited to V.34 for such callers. The V.90
   failure was in libv90modem's Phase 3 (the caller's S after Jd was not
   accepted). The engine in the submodule has a fix for that, and the
-  Courier now connects at V.90 through the gateway, but with only
-  7200 bit/s upstream (our echo is not cancelled there); see
+  Courier now connects at V.90 through the gateway (49333 / 26400). The
+  gateway's echo canceller must be off, or the upstream drops to 7200;
+  see
   `investigations/v90-physical-modem.md`.
 - **mu-law negative zero**: the modem's samples reach PJSIP as 16-bit
   PCM, so the codeword 0x7F is sent as 0xFF (both are level 0). Every

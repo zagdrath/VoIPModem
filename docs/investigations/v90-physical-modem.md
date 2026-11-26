@@ -416,6 +416,35 @@ known.
    the downstream power the caller may ask for, and with it the echo;
    VoIPModem does not expose it.
 
+### After turning the gateway's echo canceller off (2026-11-25)
+
+One setting changed on the MP-124E: Echo Canceller set to Disable
+(`EnableEchoCanceller`). `ECNLPMode` was not changed. Next call, captured:
+
+| | Echo canceller on | Echo canceller off |
+|---|---|---|
+| Echo of our answer tone, caller silent | none (below -88 dBm0) | -26 dBm0 |
+| Echo during TRN1d and Jd | none | -24.9 dBm0, 173.5 ms late, 12.5 dB under what we send |
+| Engine's canceller | takes off 0.0 dB | takes off 35 dB |
+| Upstream receiver error through TRN2d | rises to -17 dB | stays at -36 dB |
+| Connection | V.90 45333 / 7200 | **V.90 49333 / 26400** |
+| Courier: SNR, blocks resent | 24.1 dB, 6 of 423 | 26.1 dB, 0 of 727 |
+
+So the 7200 bit/s was the gateway's echo canceller, as read above: with
+it off the echo is there all the time (and strong: 12.5 dB of return
+loss), the engine learns it during TRN1d and cancels it, and the upstream
+gets the rate the line supports. The offline copy again reproduces every
+sample sent up to the connection (135,680, receive delay 1007).
+
+That call ended after 17 s of data mode with both directions still at
+full level in the last packets: it was hung up, not lost by the modems.
+The Courier logged "Loss of Carrier" and one link timeout; which side
+ended it is not known from the capture.
+
+For gateways: **the echo canceller of an FXS gateway must be off for
+V.90 calls**, not only for the usual reason, but because it hides the echo
+from the digital modem while that modem trains.
+
 ## Live tests
 
 Test 1 is for the unchanged build (0.0.1 as deployed); the others need a
