@@ -1,10 +1,16 @@
 # V.90 start-up failure with a physical modem
 
 Investigated 2026-11-25 on branch `investigate/v90-physical-modem`.
-Status: **cause found in the modem engine (libv90modem), fixed in our fork
-of it, and confirmed live on 2026-11-25: the Courier connects at V.90
-through the gateway. Still open: the upstream runs at only 7200 bit/s.**
+Status: **cause found in the modem engine (libv90modem) and fixed there:
+the fix was merged upstream as libv90modem pull request #5 and is part
+of 0.7.0, which VoIPModem's submodule now uses. Confirmed live on
+2026-11-25: the Courier connects at V.90 through the gateway, 49333 /
+26400 with the gateway's echo canceller off (7200 up with it on).**
 See "The fix" and "Live result".
+
+This is the record of the investigation as it went. The tests and live
+calls below were made on libv90modem 0.6.1 plus the fix, before it was
+merged; they have not been repeated on 0.7.0.
 
 ## Summary
 
@@ -285,9 +291,12 @@ cannot be seen from it.
 
 ## The fix
 
-In our fork of libv90modem (`zagdrath/libv90modem`, branch
-`fix/s-after-jd-timing`, one commit on top of 0.6.1); the submodule points
-there. Nothing in `third_party/libv90modem` is patched in-tree.
+One commit on top of libv90modem 0.6.1, written in a fork
+(`zagdrath/libv90modem`, branch `fix/s-after-jd-timing`) and merged
+upstream as pull request #5. It is part of libv90modem 0.7.0, the
+version the submodule uses; nothing in `third_party/libv90modem` is
+patched in-tree. What follows describes the change as it was tested in
+the fork.
 
 - **The change** (`modem/v34train.c`, `sres_symbol`): a symbol of S counts
   by itself, as before, or as a pair with the one before it when the two
@@ -311,8 +320,9 @@ there. Nothing in `third_party/libv90modem` is patched in-tree.
 - **Not run**: the fork's ARM suite, its bench hashes and its maintainer's
   private recordings; `make check` as a whole does not build with this
   machine's gcc (one benchmark program needs `clock_gettime`).
-- **VoIPModem**: the submodule moves from 0.6.0-rc1 to 0.6.1 plus the
-  fix. `libv90modem.vcxproj` gains `api/v90modem_diag.c`, new in 0.6.1.
+- **VoIPModem**: for these tests the submodule moved from 0.6.0-rc1 to
+  0.6.1 plus the fix (it is now at 0.7.0). `libv90modem.vcxproj` gains
+  `api/v90modem_diag.c`, new in 0.6.1.
   The "modem ended" log line now carries the engine's own cause, e.g.
   `start-up failed (P34_ERR_NO_S2, furthest phase3, V.90)`. Built here
   with the v142 toolset, x64 Debug: 160 tests pass. Not built here:
@@ -322,8 +332,8 @@ there. Nothing in `third_party/libv90modem` is patched in-tree.
 
 1. **Live tests** (below). Until test 2 passes, keep lines limited to
    V.34 for callers behind a gateway.
-2. **Send the fix upstream**: `libv90modem-upstream-issue.md` in this
-   folder is the text for the pull request.
+2. **Send the fix upstream**: done, libv90modem pull request #5, in
+   0.7.0.
 3. **VoIPModem, for decision, not done**: (a) call-audio recording as a
    switchable diagnostic in the format `v90m-replay` reads, so the next
    failure needs no packet capture and no alignment; (b) a codeword-exact
@@ -448,7 +458,9 @@ from the digital modem while that modem trains.
 ## Live tests
 
 Test 1 is for the unchanged build (0.0.1 as deployed); the others need a
-build from this branch.
+build with the fixed engine (libv90modem 0.7.0). Done so far: test 2
+through the MP-124E instead of the SPA112 (see "Live result"). Tests 1,
+3 and 5 and the SPA112 are open.
 
 1. **Is it the same instant every call?** Unchanged build, three or more
    V.90 attempts, packet capture each. Decode as before. Confirms the

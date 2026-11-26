@@ -60,9 +60,14 @@ call at 56000/26400.*
 Early: version 0.0.2. Tested for real so far:
 
 - A US Robotics Courier 56K calling in through a Cisco SPA112 phone
-  adapter connected at V.34 (31200 bit/s), and Windows Server 2022 RRAS
+  adapter connected at V.34 (31200 bit/s). Windows Server 2022 RRAS
   gave that Windows 11 caller internet access, with two workarounds (see
   `docs/WINDOWS_RAS_DIALIN.md`).
+- The same Courier through an AudioCodes MP-124E gateway connected at
+  V.90 (49333/26400) with the engine fix that is now in libv90modem
+  0.7.0. The gateway's echo canceller has to be off; with it on the
+  upstream was 7200 bit/s. Short calls only so far, and not yet through
+  the SPA112.
 - BinModem, a SIP software modem, connected at V.90 (56000/26400) when
   calling VoIPModem, on Windows and on Linux. VoIPModem calling BinModem
   connected at V.34 (31200/14400).

@@ -76,7 +76,7 @@ In `voipmodem.ini` (or the Manager's Settings and Line properties):
 | Registrar port | Line: SIP server, or Settings | `SipServer=<host>:<port>` | Only if the PBX's SIP listener is not on 5060 |
 | Compression **off** | Line: "V.42bis / V.44 compression" unticked | `Compression=0` | PPP stalled with it on; see Known issues |
 | V.42 on | Line: "V.42 error correction" ticked | `ErrorControl=1` (default) | Left on in the verified sessions |
-| Maximum rate V.34 or below | Line: Maximum rate "V.34 33600" | `Modulations=V21,V22,V32BIS,V34` | Required for callers through an analog gateway; see Results |
+| Maximum rate V.34 or below | Line: Maximum rate "V.34 33600" | `Modulations=V21,V22,V32BIS,V34` | Was required for callers through an analog gateway with 0.0.1 and 0.0.2; see Results |
 
 For the tested system, one line looked like this:
 
@@ -196,8 +196,13 @@ answering:
 | V.34 31200/26400 | Connected, zero CRC and framing errors in RRAS |
 | Default offer (V.92 and V.90 first) | "libv90modem: modem ended -- start-up failed", every time |
 
-So, for now, limit the line's Maximum rate (`Modulations=`) to V.34 or
-below for callers through an analog gateway.
+So with 0.0.1 and 0.0.2, limit the line's Maximum rate (`Modulations=`)
+to V.34 or below for callers through an analog gateway. The V.90
+failure was in the modem engine and is fixed in libv90modem 0.7.0,
+which builds made after 0.0.2 use. With the fix the Courier connected
+at V.90 49333/26400 through an AudioCodes MP-124E with that gateway's
+echo canceller off (not yet repeated through the SPA112, and not yet
+under RRAS). See `investigations/v90-physical-modem.md`.
 
 This is the first data point with a physical modem through an FXS
 gateway. It does not contradict the V.90 56000/26400 result in

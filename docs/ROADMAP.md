@@ -76,7 +76,7 @@ connection, not merely an answered telephone call.*
 ### Done
 
 - **Modem engine**: [libv90modem](https://github.com/georgica/libv90modem)
-  0.6.0 (GPL-2.0-only), integrated as a submodule with an MSVC project,
+  0.7.0 (GPL-2.0-only), integrated as a submodule with an MSVC project,
   per the spec's "implement or integrate a suitable modem DSP engine" and
   CLAUDE.md's preference for established libraries. It provides V.8,
   V.21 through V.34, V.90/V.92 and V.42/V.42bis/V.44. Two unit tests
@@ -131,26 +131,28 @@ RRAS (Phase 5). The SPA112's settings are in `WINDOWS_RAS_DIALIN.md`.
 | **V.34 31200/26400** | Connected, zero CRC and framing errors counted by RRAS |
 | Default offer (V.92, V.90 first) | "libv90modem: modem ended -- start-up failed", every call |
 
-So through the gateway, lines are limited to V.34 (`Modulations=`) for
-now. This does not contradict the V.90 result above, which had no
+So through the gateway, lines had to be limited to V.34
+(`Modulations=`) with 0.0.1 and 0.0.2; the cause has since been fixed
+in the engine (see Open, below). This does not contradict the V.90 result above, which had no
 analog leg. VoIPModem calling the physical modem has not been tried.
 
 ### Open
 
 - **Physical analog modem**: the acceptance test. Calling into a line,
   it connects at up to V.34 (above). Still open: V.90/V.92 start-up
-  through the gateway fails, and VoIPModem calling the physical modem
-  has not been tried. The V.90 failure was traced offline (2026-11-25) to
-  libv90modem's Phase 3: it does not accept the caller's S after Jd at
-  one sampling phase. The submodule now carries a fix (our fork of
-  libv90modem, 0.6.1 plus one commit), which passes on the recording of
-  the failed call and **on live calls (2026-11-25): the Courier connects
-  at V.90 with V.42**, through the AudioCodes MP-124E (the SPA112 not
-  yet repeated): **49333 down / 26400 up** with the gateway's echo
+  through the gateway failed until the fix for the cause found on
+  2026-11-25 (see `investigations/v90-physical-modem.md`): libv90modem
+  did not take the caller's S after Jd on a tilted line with clock
+  drift, so Jd ran until start-up failed, every call. The fix went
+  upstream as libv90modem pull request #5 and is part of 0.7.0, which
+  the submodule now uses. With it (2026-11-25, engine 0.6.1 plus the
+  fix) **the Courier connected at V.90 with V.42** through the
+  AudioCodes MP-124E: **49333 down / 26400 up** with the gateway's echo
   canceller off. With it on the upstream was only 7200 bit/s: the
   gateway then returns no echo while the caller is silent, which is when
-  the engine's own canceller trains, so our echo went uncancelled. Open:
-  a long call with data transfer, the SPA112, and V.92. See `investigations/v90-physical-modem.md`, "Live result".
+  the engine's own canceller trains, so our echo went uncancelled. Still
+  open: the same calls on 0.7.0 and through the SPA112, a long call with
+  data transfer, V.92, and VoIPModem calling the physical modem.
 - **V.92**: answering, calls settle at V.90. On one call (before the
   jitter-buffer fix) our side retrained with Tone B while BinModem was
   setting up its V.92 PCM upstream. Not yet known whether that was the

@@ -72,7 +72,7 @@ tests/                     VoIPModem.Tests (executable, hand-rolled framework in
 third_party/
   pjproject/               PJSIP 2.17, git submodule, built from source
   pjsip-config/            VoIPModem's config_site.h for pjproject
-  libv90modem/             libv90modem 0.6.1 plus one fix, git submodule of our fork (GPL-2.0-only)
+  libv90modem/             libv90modem 0.7.0, git submodule (GPL-2.0-only)
   libv90modem-build/       libv90modem.vcxproj: MSVC build of the submodule (Linux uses its Makefile)
   nlohmann/                JSON for Modern C++ 3.11.3, single header (MIT), for the control API
 build/
@@ -352,7 +352,7 @@ line's `CallAudioBridge` and nothing else.
 
 ## The modem (CallAudioBridge + libv90modem)
 
-[libv90modem](https://github.com/georgica/libv90modem) 0.6.1 (C99,
+[libv90modem](https://github.com/georgica/libv90modem) 0.7.0 (C99,
 fixed point, GPL-2.0-only) is the modem: V.8, V.21, V.22/V.22bis,
 V.32bis, V.34, V.90/V.92 (answering = digital/server side, calling =
 analogue/client side), Bell 103/212A, and V.42 (LAPM) with V.42bis/V.44
@@ -519,13 +519,15 @@ verified, and the Linux test results.
 - **PPP stalls with V.42bis/V.44 on**: under RRAS, data from the caller
   stopped right after PPP authentication; with `Compression=0` it flows.
   Not yet investigated. See `WINDOWS_RAS_DIALIN.md`, Known issues.
-- **Through an FXS gateway**, V.90/V.92 start-up has failed with a
-  physical modem; lines are limited to V.34 for such callers. The V.90
-  failure was in libv90modem's Phase 3 (the caller's S after Jd was not
-  accepted). The engine in the submodule has a fix for that, and the
-  Courier now connects at V.90 through the gateway (49333 / 26400). The
-  gateway's echo canceller must be off, or the upstream drops to 7200;
-  see
+- **Through an FXS gateway**, V.90 start-up failed on every call from a
+  physical modem with libv90modem 0.6.1 and earlier: the failure was in
+  the engine's Phase 3 (the caller's S after Jd was not accepted). It
+  was fixed upstream by pull request #5, which is part of 0.7.0. With
+  the fix a USR Courier connected at V.90 through an AudioCodes MP-124E
+  (49333 / 26400). The gateway's echo canceller must be off, or the
+  upstream drops to 7200. Measured on 0.6.1 plus the fix, on short
+  calls; not yet repeated on 0.7.0, through the Cisco SPA112, or over a
+  long call, and V.92 through a gateway is untried. See
   `investigations/v90-physical-modem.md`.
 - **mu-law negative zero**: the modem's samples reach PJSIP as 16-bit
   PCM, so the codeword 0x7F is sent as 0xFF (both are level 0). Every

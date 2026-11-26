@@ -3,7 +3,7 @@
 	url = https://github.com/pjsip/pjproject.git
 [submodule "third_party/libv90modem"]
 	path = third_party/libv90modem
-	url = https://github.com/zagdrath/libv90modem.git
+	url = https://github.com/georgica/libv90modem.git
 [submodule "third_party/pjproject-xp"]
 	path = third_party/pjproject-xp
 	url = https://github.com/pjsip/pjproject.git
