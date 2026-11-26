@@ -1,11 +1,14 @@
-# Draft issue for georgica/libv90modem
+# Draft pull request for georgica/libv90modem
 
-Ready to post once the recording is attached. Background and method:
-`v90-physical-modem.md` in this folder.
+The text for a pull request from `zagdrath/libv90modem`, branch
+`fix/s-after-jd-timing` (one commit on 0.6.1: the fix, a unit test, the
+recording as a fixture). Background and method: `v90-physical-modem.md`
+in this folder. The fix has not been tried on a live call; say so when
+posting.
 
 ---
 
-**Title:** V.90 answering: the caller's S after Jd is never accepted at one sampling phase (P34_ERR_NO_S2) with a USR Courier behind an FXS gateway
+**Title:** v34train: S after a silence is taken on a tilted line at any timing phase (P34_ERR_NO_S2 with a USR Courier behind an FXS gateway)
 
 ## What happens
 
@@ -20,7 +23,7 @@ TRN1d, and then answers Jd with S. `sres_symbol` never leaves
 gives up, and sends Tone A. `P34_JD` runs to `T_S_AFTER_JD`:
 `P34_ERR_NO_S2`.
 
-Version: 0.6.0 (`d729110`, 0.6.0-rc1). Host: `v90m_process_linear`,
+Seen with 0.6.0 (`d729110`, 0.6.0-rc1); 0.6.1 replays the recording the same way. Host: `v90m_process_linear`,
 mu-law, `V90M_MOD_V21 | V22 | V32BIS | V34 | V90`, `tx_level` 3000,
 `echo_delay` -1, everything else as `v90m_cfg_default`.
 
@@ -66,24 +69,37 @@ V.34 call is 3199.837 Hz (-51 ppm against our clock): about half a symbol
 of drift in 3 s. That would put the S on the same instant on every call,
 which fits "every call fails"; this part is inferred, from one recording.
 
-## What I tried
+## The change
 
-Judging the energy over a pair of symbols in the two places, as a test of
-the diagnosis only:
+`sres_symbol` (`modem/v34train.c`): a symbol counts by itself, as before,
+or as a pair with the one before it when the two hold the power of S
+between them; `SRES_TIME`'s "it went away again" likewise. `SRES_WAIT`
+keeps the energy of the symbol before in `sr`, which it did not use; no
+struct changes size. A run of symbols that passed before is counted
+exactly as before.
 
-```c
-/* SRES_WAIT */
-{ int64_t pe = s->sr; s->sr = e; s->cnt = (e + pe) > half ? s->cnt + 1 : 0; }
+Tests, each seen failing first:
 
-/* SRES_TIME */
-if (e + ((int64_t)s->sr * s->sr + (int64_t)s->si * s->si) < half / 2 && s->cnt > 0) {
-```
+- `test_sres`: S after a silence through a first-order high-pass at
+  500 Hz, -50 ppm, the silence stepped over a whole symbol of drift in
+  sixteenths. Before: resumed 12 of 16 (not from 0.375 to 0.56 of a
+  symbol). After: 16 of 16, the 800 symbols after S-bar without error.
+- `test/fixtures/usrc1.raw.xz`, this call. Before: Phase 3/4 state 4
+  until 14.033 s. After: state 5 at 11.867 s.
 
-With this the recording goes to `P34_DIL` at 11.867 s as recorded and
-with S moved by -2 to +2 samples. I have not run the test suite or the
-fixtures against it, and `SRES_WAIT` borrowing `s->sr` is only for the
-experiment. You will know better what the threshold was protecting
-against (SCR, the echo of Jd).
+Golden files: `test_sres` (the new line and count); `test_orig_v34`, one
+figure (in "retrain begun by the caller" a weak symbol at count 13 no
+longer starts the count over; SNR 31.3 to 31.4 dB). The seven other
+fixtures' traces are unchanged.
+
+Run on Windows with gcc 15.2 (mingw): the 85 programs of `TESTS` against
+their golden files, and the fixtures. **Not run**: `make check` as a
+whole (`v34/test/test_bench.c` needs `clock_gettime` there), `check-arm`,
+the benches' hashes, the replay proof. Please run those.
+
+**Not tried on a live call.** The recording ends where the caller gave
+up, so whether the Courier connects once Jd' and the DIL are sent is not
+known yet.
 
 ## Two smaller things seen on the way
 
@@ -102,7 +118,7 @@ against (SCR, the echo of Jd).
 
 ## Recording
 
-`v90-failed.raw` (attached): `v90m-replay` format, companded, mu-law,
+`test/fixtures/usrc1.raw.xz` (in this pull request): `v90m-replay` format, companded, mu-law,
 14.2 s, made from a packet capture on the answering host. Per 10 ms, 80
 octets heard then 80 sent. Sample 0 is the modem's start; the heard
 stream is delayed by the receive path's 1091 samples, found by matching
@@ -111,10 +127,10 @@ whole call when the output of `v90m_process_linear` is encoded with the
 host's G.711 table).
 
 ```
-v90m-replay -r 3000 -d 0 -s 0 v90-failed.raw
+v90m-replay -r 3000 -d 0 -s 0 usrc1.raw
 ```
 
-ends with "the modem stopped (1)" at 14.033 s. It reports 1962 samples of
+ended with "the modem stopped (1)" at 14.033 s before the change. It reports 1962 samples of
 transmit differing from the recording: the host used
 `v90m_process_linear` and its own mu-law encoder, which rounds values
 between two levels differently outside the PCM phase (1890 samples), and

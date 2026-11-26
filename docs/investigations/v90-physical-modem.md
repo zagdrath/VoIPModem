@@ -1,9 +1,10 @@
 # V.90 start-up failure with a physical modem
 
 Investigated 2026-11-25 on branch `investigate/v90-physical-modem`.
-Status: **cause found in the modem engine (libv90modem), reproduced
-offline. Nothing is fixed and V.90 with a physical modem is still not
-working.** A live test is needed once the engine is changed.
+Status: **cause found in the modem engine (libv90modem) and reproduced
+offline; a fix is in our fork of the engine and in the submodule. It has
+not been tried on a live call, so V.90 with a physical modem is still not
+known to work.** See "The fix" and "Live tests".
 
 ## Summary
 
@@ -282,24 +283,56 @@ cannot be seen from it.
 - A-law on the wire: the table check passes, no call was analysed.
 - VoIPModem calling the physical modem.
 
+## The fix
+
+In our fork of libv90modem (`zagdrath/libv90modem`, branch
+`fix/s-after-jd-timing`, one commit on top of 0.6.1); the submodule points
+there. Nothing in `third_party/libv90modem` is patched in-tree.
+
+- **The change** (`modem/v34train.c`, `sres_symbol`): a symbol of S counts
+  by itself, as before, or as a pair with the one before it when the two
+  together hold the power of S. The "it went away again" test in the next
+  state is done the same way. A run of symbols that passed before is
+  counted exactly as before.
+- **A unit test that fails without it** (`test/test_sres.c`): S after a
+  silence on a simulated line with a first-order high-pass at 500 Hz and a
+  -50 ppm clock, the silence stepped over a whole symbol of drift in
+  sixteenths. Before: found at 12 of 16 timing phases (missed from 0.375
+  to 0.56 of a symbol). After: 16 of 16, and the 800 symbols after S-bar
+  are received without error. This also reproduces the mechanism without
+  the recording.
+- **The recording as a fixture** (`test/fixtures/usrc1.raw.xz` in the
+  fork): before, the trace stays in Jd until 14.033 s; after, Jd' and the
+  DIL at 11.867 s.
+- **Nothing else moved**: the fork's seven other real-modem recordings
+  replay with identical traces. Of its 85 test programs' outputs one
+  figure changed, explained in the commit (a V.34 retrain takes its S
+  sooner; SNR 31.3 to 31.4 dB).
+- **Not run**: the fork's ARM suite, its bench hashes and its maintainer's
+  private recordings; `make check` as a whole does not build with this
+  machine's gcc (one benchmark program needs `clock_gettime`).
+- **VoIPModem**: the submodule moves from 0.6.0-rc1 to 0.6.1 plus the
+  fix. `libv90modem.vcxproj` gains `api/v90modem_diag.c`, new in 0.6.1.
+  The "modem ended" log line now carries the engine's own cause, e.g.
+  `start-up failed (P34_ERR_NO_S2, furthest phase3, V.90)`. Built here
+  with the v142 toolset, x64 Debug: 160 tests pass. Not built here:
+  Win32, the XP build, Linux.
+
 ## Next steps
 
-1. **Report to libv90modem**: `libv90modem-upstream-issue.md` in this
-   folder is the draft. The fix belongs there; the submodule is not
-   patched in-tree.
-2. **Live test once an engine with a change is available** (below).
+1. **Live tests** (below). Until test 2 passes, keep lines limited to
+   V.34 for callers behind a gateway.
+2. **Send the fix upstream**: `libv90modem-upstream-issue.md` in this
+   folder is the text for the pull request.
 3. **VoIPModem, for decision, not done**: (a) call-audio recording as a
    switchable diagnostic in the format `v90m-replay` reads, so the next
    failure needs no packet capture and no alignment; (b) a codeword-exact
    transmit path, which removes the 0x7F deviation.
 
-Until then lines stay limited to V.34 for callers behind a gateway
-(`Modulations=`), as `ROADMAP.md` says.
-
 ## Live tests
 
-None of these can be run usefully before the engine changes, except
-test 1.
+Test 1 is for the unchanged build (0.0.1 as deployed); the others need a
+build from this branch.
 
 1. **Is it the same instant every call?** Unchanged build, three or more
    V.90 attempts, packet capture each. Decode as before. Confirms the
@@ -310,7 +343,9 @@ test 1.
 2. **Does the engine change fix start-up?** Build against the changed
    engine, default offer limited to V.90 (`Modulations=V21,V22,V32BIS,V34,V90`),
    Courier through the SPA112, capture. Success: `libv90modem: CONNECTED
-   V.90 ...` in the log. Record the rates, the SNR, and the Courier's
+   V.90 ...` in the log. On a failure the log now names the cause
+   (`modem ended -- start-up failed (<error>, furthest <phase>, ...)`):
+   anything other than `P34_ERR_NO_S2` means the call got further. Record the rates, the SNR, and the Courier's
    `ATI6` and `ATI11` after the call. If it still fails: the capture shows
    the new stopping point (DIL, CPt, MP), and that goes to the engine's
    maintainer.
