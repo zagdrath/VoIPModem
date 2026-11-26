@@ -139,8 +139,11 @@ analog leg. VoIPModem calling the physical modem has not been tried.
 
 - **Physical analog modem**: the acceptance test. Calling into a line,
   it connects at up to V.34 (above). Still open: V.90/V.92 start-up
-  through the gateway fails (cause not investigated), and VoIPModem
-  calling the physical modem has not been tried.
+  through the gateway fails, and VoIPModem calling the physical modem
+  has not been tried. The V.90 failure was traced offline (2026-11-25) to
+  libv90modem's Phase 3: it does not accept the caller's S after Jd at
+  one sampling phase. Not fixed; see
+  `investigations/v90-physical-modem.md`.
 - **V.92**: answering, calls settle at V.90. On one call (before the
   jitter-buffer fix) our side retrained with Tone B while BinModem was
   setting up its V.92 PCM upstream. Not yet known whether that was the

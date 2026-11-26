@@ -520,7 +520,13 @@ verified, and the Linux test results.
   stopped right after PPP authentication; with `Compression=0` it flows.
   Not yet investigated. See `WINDOWS_RAS_DIALIN.md`, Known issues.
 - **Through an FXS gateway**, V.90/V.92 start-up has failed with a
-  physical modem; lines are limited to V.34 for such callers.
+  physical modem; lines are limited to V.34 for such callers. The V.90
+  failure is in libv90modem's Phase 3 (the caller's S after Jd is not
+  accepted); see `investigations/v90-physical-modem.md`.
+- **mu-law negative zero**: the modem's samples reach PJSIP as 16-bit
+  PCM, so the codeword 0x7F is sent as 0xFF (both are level 0). Every
+  other codeword, and all of A-law, goes out as the modem intended. See
+  `investigations/v90-physical-modem.md`.
 - **No call-audio recording** on our side yet, so a failed call can only
   be diagnosed from logs and the far end's capture.
 - **Serial control signals**: DCD and DTR follow `&C`/`&D` (see "Serial
