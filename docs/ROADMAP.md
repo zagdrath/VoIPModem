@@ -145,7 +145,8 @@ analog leg. VoIPModem calling the physical modem has not been tried.
   one sampling phase. The submodule now carries a fix (our fork of
   libv90modem, 0.6.1 plus one commit), which passes on the recording of
   the failed call and **on live calls (2026-11-25): the Courier connects
-  at V.90, 45333 to 50666 bit/s down, with V.42**. Open: the upstream is
+  at V.90, 45333 to 50666 bit/s down, with V.42**, through the AudioCodes
+  MP-124E (the SPA112 not yet repeated). Open: the upstream is
   only 7200 bit/s, because the echo of our own downstream comes back
   18 dB under the caller's signal and the engine's echo canceller has
   learned nothing of it (the gateway returns no echo while the caller is

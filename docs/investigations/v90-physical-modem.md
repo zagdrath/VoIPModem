@@ -332,7 +332,8 @@ there. Nothing in `third_party/libv90modem` is patched in-tree.
 ## Live result (2026-11-25)
 
 Build `5352fcf` (x64 Release, engine 0.6.1 plus the fix), the Courier
-calling through the lab's FXS gateway, V.42 on.
+calling through the AudioCodes MP-124E, V.42 on. Not yet repeated
+through the SPA112.
 
 | | |
 |---|---|
@@ -396,10 +397,14 @@ known.
 
 ### What to try next
 
-1. **Gateway**: find and turn off whatever gates the return path. On the
-   SPA112 the echo suppressor ("Echo Supp Enable") is a setting of its
-   own, apart from "Echo Canc Enable" and "Echo Canc Adapt Enable"; all
-   three off. Check with a capture: during our answer tone, before the
+1. **Gateway**: find and turn off whatever gates the return path. These
+   calls were on the MP-124E: look at its non-linear processor (NLP)
+   setting, which is apart from the echo canceller's on/off, and at what
+   it does to the echo canceller once it has switched a call to modem
+   transport. On the SPA112 the echo suppressor ("Echo Supp Enable") is a
+   setting of its own, apart from "Echo Canc Enable" and "Echo Canc Adapt
+   Enable"; all three off. The setting names were not checked against
+   either unit. Check with a capture: during our answer tone, before the
    Courier sends anything, 2100 Hz should now be visible in what we
    receive (somewhere near -35 dBm0 instead of nothing). If it is, the
    engine's canceller has something to train on, and the upstream rate of
