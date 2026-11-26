@@ -1,10 +1,10 @@
 # V.90 start-up failure with a physical modem
 
 Investigated 2026-11-25 on branch `investigate/v90-physical-modem`.
-Status: **cause found in the modem engine (libv90modem) and reproduced
-offline; a fix is in our fork of the engine and in the submodule. It has
-not been tried on a live call, so V.90 with a physical modem is still not
-known to work.** See "The fix" and "Live tests".
+Status: **cause found in the modem engine (libv90modem), fixed in our fork
+of it, and confirmed live on 2026-11-25: the Courier connects at V.90
+through the gateway. Still open: the upstream runs at only 7200 bit/s.**
+See "The fix" and "Live result".
 
 ## Summary
 
@@ -328,6 +328,88 @@ there. Nothing in `third_party/libv90modem` is patched in-tree.
    switchable diagnostic in the format `v90m-replay` reads, so the next
    failure needs no packet capture and no alignment; (b) a codeword-exact
    transmit path, which removes the 0x7F deviation.
+
+## Live result (2026-11-25)
+
+Build `5352fcf` (x64 Release, engine 0.6.1 plus the fix), the Courier
+calling through the lab's FXS gateway, V.42 on.
+
+| | |
+|---|---|
+| Manager, one call of over two minutes | V.90, 49333 down / 7200 up, LAPM, no compression; one rate renegotiation after 80 s; data both ways |
+| Courier `ATI6` after a call | 50666/7200, LAPM 128/15, 423 blocks sent, 6 resent, 5 BLERs, 1 retrain granted |
+| Courier `ATI11` | V.90/V.34+, 8000/3200 symbols/s, upstream carrier 1920 Hz, receive level -25.1 dBm, SNR 24.1 dB, near echo loss 21.1 dB, round trip 176 ms, V.90 status `uu,5,12Y,12.5,0,0N,0,41.4,64.2` |
+| A captured call of 37 s | V.90, 45333 down / 7200 up at 17.0 s after the modem started |
+
+So the start-up fault is fixed on the live line: the engine takes the
+Courier's S 2.1 s into Jd, sends Jd' and the DIL, and Phases 3 and 4
+complete.
+
+### Why the upstream is 7200 bit/s
+
+The captured call was analysed like the failed one. With a receive delay
+of 1001 samples the offline copy of the bridge reproduces all 136,160
+samples sent up to the connection, so the engine's trace of it is exact.
+
+- At the start of Phase 4 (the Courier's CPt) the engine's upstream
+  receiver is clean: error -33 dB, "upstream SNR 28.0 dB".
+- Within a second of our TRN2d starting (our downstream at full power)
+  the error rises to -17 dB and stays there, in data mode too.
+- The engine sets the upstream ceiling from that figure at the end of
+  TRN2d (`p34d.c`, `(snr - 9 dB) / 3 dB` bits per symbol): 7200 bit/s.
+
+The -17 dB is the echo of our own downstream:
+
+| Part of the call | We send | We hear | Echo of what we send |
+|---|---|---|---|
+| ANSam, before the Courier's CM | -14 dBm0, 2100 Hz | -67.8 dBm0 | none: 2100 Hz below -88 dBm0 |
+| TRN1d and Jd, the Courier silent | -12.4 dBm0 | -67.7 dBm0 | none: more than 74 dB down |
+| Data mode, both sending (18 s) | -12.3 dBm0 | -17.0 dBm0 | **-35.0 dBm0**, 179.5 ms late, 18 dB under the Courier's signal |
+
+(Cross-correlation of the two streams over lags up to 500 ms; in data
+mode the result is 11 dB above what the method can resolve.)
+
+Two things follow.
+
+1. **The gateway returns our echo only while the caller is sending.** A
+   two-wire port cannot have 74 dB of return loss by itself: something in
+   the gateway shuts the return path, or cancels it, while the phone side
+   is quiet (an echo suppressor, the non-linear part of an echo canceller,
+   or a noise gate), whatever its echo-canceller setting says.
+2. **The engine trains its echo canceller exactly then.** V.90 has the
+   digital modem learn its echo during TRN1d, with the caller silent
+   (`p34d.c`, `P34_SD`). It finds nothing to learn (the trace shows the
+   canceller taking 0.0 dB off, and its delay search settling on 1404
+   samples where the echo is at 1436), and it does not adapt later. So in
+   Phase 4 and in data mode the echo is not cancelled at all, and 18 dB is
+   the upstream's signal-to-echo ratio.
+
+V.34 on the same line reached 24000 bit/s upstream because there the
+Courier arrives 7 dB stronger (-10.7 against -17 dBm0), our signal is
+2 dB weaker, and the V.34 engine has a second canceller for the far echo.
+
+Also seen: in this call the engine's intended codeword was mu-law negative
+zero (0x7F, sent as 0xFF) 10,488 times, nearly all in the DIL, which the
+Courier asked to include level 0. The Courier completed the DIL and chose
+a constellation, so this did not stop it; whether it cost anything is not
+known.
+
+### What to try next
+
+1. **Gateway**: find and turn off whatever gates the return path. On the
+   SPA112 the echo suppressor ("Echo Supp Enable") is a setting of its
+   own, apart from "Echo Canc Enable" and "Echo Canc Adapt Enable"; all
+   three off. Check with a capture: during our answer tone, before the
+   Courier sends anything, 2100 Hz should now be visible in what we
+   receive (somewhere near -35 dBm0 instead of nothing). If it is, the
+   engine's canceller has something to train on, and the upstream rate of
+   the next V.90 call shows whether that was all.
+2. **If the gateway cannot be made to pass the echo**: the engine would
+   have to learn the echo with the caller sending (in Phase 4 or data
+   mode). That is a change to libv90modem, not a setting.
+3. Not a fix, to bound the problem: `max_tx_code` in `v90m_cfg` lowers
+   the downstream power the caller may ask for, and with it the echo;
+   VoIPModem does not expose it.
 
 ## Live tests
 

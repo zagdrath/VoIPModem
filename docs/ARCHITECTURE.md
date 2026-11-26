@@ -522,8 +522,9 @@ verified, and the Linux test results.
 - **Through an FXS gateway**, V.90/V.92 start-up has failed with a
   physical modem; lines are limited to V.34 for such callers. The V.90
   failure was in libv90modem's Phase 3 (the caller's S after Jd was not
-  accepted). The engine in the submodule has a fix for that, tested on a
-  recording only, not on a live call; see
+  accepted). The engine in the submodule has a fix for that, and the
+  Courier now connects at V.90 through the gateway, but with only
+  7200 bit/s upstream (our echo is not cancelled there); see
   `investigations/v90-physical-modem.md`.
 - **mu-law negative zero**: the modem's samples reach PJSIP as 16-bit
   PCM, so the codeword 0x7F is sent as 0xFF (both are level 0). Every

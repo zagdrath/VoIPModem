@@ -9,7 +9,7 @@ just coded. `ARCHITECTURE.md` describes how each part works.
 | 1. Serial modem skeleton | **Complete**, verified with a terminal emulator |
 | 2. SIP call control | **Complete**, verified against Asterisk |
 | 3. RTP audio | **Complete**, verified live; media path retuned for modems in Phase 4 |
-| 4. Modem interoperability | **In progress**: up to V.90 with a SIP softmodem; a physical modem through an FXS gateway connects at up to V.34 (V.90 start-up fails) |
+| 4. Modem interoperability | **In progress**: up to V.90 with a SIP softmodem; a physical modem through an FXS gateway connects at V.34 and, since 2026-11-25, at V.90 (49333 down, but only 7200 up: our echo is not cancelled) |
 | 5. Windows networking (RAS/PPP) | **Started**: RRAS on Server 2022 answered a physical modem; PPP session, internet through NAT, with workarounds; legacy client not yet tested |
 | 6. Compatibility and optimization | **Started**: x64 + Win32 builds; XP Win32 build runs on 32-bit XP (V.34 call live); XP x64 / Server 2003 not yet built; Windows service + control API + VoIPModem Manager built |
 
@@ -144,8 +144,13 @@ analog leg. VoIPModem calling the physical modem has not been tried.
   libv90modem's Phase 3: it does not accept the caller's S after Jd at
   one sampling phase. The submodule now carries a fix (our fork of
   libv90modem, 0.6.1 plus one commit), which passes on the recording of
-  the failed call. **Not yet tried on a live call**; the tests to run are
-  in `investigations/v90-physical-modem.md`.
+  the failed call and **on live calls (2026-11-25): the Courier connects
+  at V.90, 45333 to 50666 bit/s down, with V.42**. Open: the upstream is
+  only 7200 bit/s, because the echo of our own downstream comes back
+  18 dB under the caller's signal and the engine's echo canceller has
+  learned nothing of it (the gateway returns no echo while the caller is
+  silent, which is when the canceller trains). V.92 has not been tried
+  with it. See `investigations/v90-physical-modem.md`, "Live result".
 - **V.92**: answering, calls settle at V.90. On one call (before the
   jitter-buffer fix) our side retrained with Tone B while BinModem was
   setting up its V.92 PCM upstream. Not yet known whether that was the
