@@ -299,7 +299,14 @@ void CallAudioBridge::OnModemEvent(int event) {
             if (ecActive_) v90m_ec_line_restored(ec_);
             break;
         case V90M_EV_ENDED: {
-            logger_.Info(std::string("libv90modem: modem ended -- ") + DescribeEnd(st.end));
+            // The engine's own account of the end (libv90modem 0.6.1): the
+            // cause by name, the furthest phase reached and the modulation
+            // chosen, e.g. "P34_ERR_NO_S2, furthest phase3, V.90".
+            v90m_diag diag;
+            v90m_get_diag(modem_, &diag);
+            logger_.Info(std::string("libv90modem: modem ended -- ") + DescribeEnd(st.end) + " (" +
+                         v90m_err_name(diag.error) + ", furthest " + v90m_phase_name(diag.phase) + ", " +
+                         v90m_conn_name(diag.selected) + ")");
             if (ecActive_) {
                 UpdateLinkStatus(true);
                 v90m_ec_abort(ec_);

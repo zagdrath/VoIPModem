@@ -91,6 +91,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(UpstreamDir)api\v90modem.c" />
+    <!-- since libv90modem 0.6.1: v90m_get_diag and its names -->
+    <ClCompile Include="$(UpstreamDir)api\v90modem_diag.c" />
     <ClCompile Include="$(UpstreamDir)modem\*.c" />
     <ClCompile Include="$(UpstreamDir)v90\*.c" />
     <ClCompile Include="$(UpstreamDir)v34\*.c" />
